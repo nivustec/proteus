@@ -53,7 +53,7 @@ const Button = ({ ...props }) => {
 }
 ```
 
-## [1.0.0] - 2024-01-XX
+## [1.0.0] - 2025-11-13
 
 ### Initial Release
 - Automatic data-testid injection for React components
