@@ -18,7 +18,7 @@ export interface ElementInfo {
   fileName: string;
   lineNumber: number;
   key?: string;
-  index?: number;
+  index?: string;
   isDynamic?: boolean;
   // Optional additional semantic context (e.g., parent component names)
   componentPath?: string[];

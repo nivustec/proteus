@@ -2,6 +2,38 @@
 
 All notable changes to Proteus will be documented in this file.
 
+## [1.0.2] - 2025-01-13
+
+### Fixed
+- **Critical bug fix**: Duplicate data-testid in `.map()` iterations
+  - Elements inside `.map()` were receiving literal string `"index"` instead of the actual index value
+  - Now correctly generates dynamic template strings: `data-testid={\`qa_component_element_${index}\`}`
+  - Added unique hash suffix to elements within maps to prevent collisions between similar structures
+  - All data-testid are now guaranteed to be unique across the entire application
+
+### Technical Details
+- Enhanced `getMapInfo()` to extract the index variable name from map callbacks
+- Modified `buildAttributeForElement()` to generate template string expressions for dynamic IDs
+- Added line-based hash generation for elements inside maps to ensure uniqueness
+- Updated type definitions to support string-based index tracking
+
+### Example
+```tsx
+// Before (Bug - all elements had same ID)
+{items.map((item, index) => (
+  <div key={index} data-testid="qa_component_container_index">
+    <span data-testid="qa_component_span_index">{item}</span>
+  </div>
+))}
+
+// After (Fixed - unique IDs)
+{items.map((item, index) => (
+  <div key={index} data-testid={`qa_component_container_a8f3_${index}`}>
+    <span data-testid={`qa_component_span_b2d4_${index}`}>{item}</span>
+  </div>
+))}
+```
+
 ## [1.0.0] - 2025-11-13
 
 ### Initial Release

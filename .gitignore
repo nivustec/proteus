@@ -6,3 +6,6 @@ dist/
 *.tmp
 coverage/
 .nyc_output/
+test-cases/
+*.backup.*
+code-block-*.txt

@@ -220,7 +220,7 @@ function isInsideMapFunction(path: any): boolean {
 }
 
 // Returns map key/index info for elements within Array.prototype.map
-function getMapInfo(path: any): { key?: string; index?: number } {
+function getMapInfo(path: any): { key?: string; index?: string; indexVarName?: string } {
   let current = path.parentPath;
 
   while (current) {
@@ -230,6 +230,19 @@ function getMapInfo(path: any): { key?: string; index?: number } {
       current.node.callee.property.type === "Identifier" &&
       current.node.callee.property.name === "map"
     ) {
+      // Get the map callback function to extract index parameter name
+      const mapCallback = current.node.arguments[0];
+      let indexVarName: string | undefined;
+      
+      if (mapCallback) {
+        if (t.isArrowFunctionExpression(mapCallback) || t.isFunctionExpression(mapCallback)) {
+          const params = mapCallback.params;
+          if (params.length >= 2 && t.isIdentifier(params[1])) {
+            indexVarName = params[1].name;
+          }
+        }
+      }
+
       // Try current opening element
       if (path.isJSXOpeningElement()) {
         const keyAttr = path.node.attributes.find(
@@ -241,13 +254,17 @@ function getMapInfo(path: any): { key?: string; index?: number } {
 
         if (keyAttr && t.isJSXAttribute(keyAttr) && keyAttr.value) {
           if (t.isStringLiteral(keyAttr.value)) {
-            return { key: keyAttr.value.value };
+            return { key: keyAttr.value.value, indexVarName };
           } else if (
             t.isJSXExpressionContainer(keyAttr.value)
           ) {
             const expr = keyAttr.value.expression as any;
             const keyExpr = expressionToText(expr);
-            if (keyExpr) return { key: keyExpr };
+            // If key is the same as index variable name, use it as index instead
+            if (keyExpr && indexVarName && keyExpr === indexVarName) {
+              return { index: indexVarName, indexVarName };
+            }
+            if (keyExpr) return { key: keyExpr, indexVarName };
           }
         }
       }
@@ -264,15 +281,24 @@ function getMapInfo(path: any): { key?: string; index?: number } {
           ) as t.JSXAttribute | undefined;
           if (keyAttr && keyAttr.value) {
             if (t.isStringLiteral(keyAttr.value)) {
-              return { key: keyAttr.value.value };
+              return { key: keyAttr.value.value, indexVarName };
             }
             if (t.isJSXExpressionContainer(keyAttr.value)) {
               const keyExpr = expressionToText(keyAttr.value.expression as any);
-              if (keyExpr) return { key: keyExpr };
+              // If key is the same as index variable name, use it as index instead
+              if (keyExpr && indexVarName && keyExpr === indexVarName) {
+                return { index: indexVarName, indexVarName };
+              }
+              if (keyExpr) return { key: keyExpr, indexVarName };
             }
           }
         }
         ancestor = ancestor.parentPath;
+      }
+      
+      // If no key found but we have index var name, return it
+      if (indexVarName) {
+        return { index: indexVarName, indexVarName };
       }
       break;
     }
@@ -420,7 +446,7 @@ function mapRole(tag: string): string {
 function buildAttributeForElement(
   config: ProteuConfig,
   info: ElementInfo,
-  mapInfo: { key?: string; index?: number },
+  mapInfo: { key?: string; index?: string; indexVarName?: string },
   classNameHint?: string,
   siblingPos?: { index: number; total: number }
 ): { attributeText: string; idForRecord: string } {
@@ -438,9 +464,20 @@ function buildAttributeForElement(
     const descriptor = info.descriptor ? info.descriptor.replace(/\s+/g, "-") : undefined;
     // Add sibling index when multiple identical tags under same parent
     const siblingIndexPart = siblingPos && siblingPos.total > 1 ? String(siblingPos.index + 1) : undefined;
-    const base = ["qa_" + component, role, siblingIndexPart, descriptor]
-      .filter(Boolean)
-      .join("_");
+    
+    // When inside a map, add unique hash to prevent collisions between similar elements
+    let base: string;
+    if (info.isDynamic) {
+      // Use full line number + role + sibling to create unique hash
+      const uniqueHash = shortStableHash(`${info.fileName}:${info.lineNumber}:${role}:${siblingIndexPart || ''}`).substring(0, 4);
+      base = ["qa_" + component, role, siblingIndexPart, descriptor, uniqueHash]
+        .filter(Boolean)
+        .join("_");
+    } else {
+      base = ["qa_" + component, role, siblingIndexPart, descriptor]
+        .filter(Boolean)
+        .join("_");
+    }
 
     // In functional strategy, always append map key for elements inside map
     if (info.isDynamic && mapInfo && mapInfo.key) {
@@ -450,8 +487,10 @@ function buildAttributeForElement(
       }
       return { attributeText: `data-testid="${base}_${mapInfo.key}"`, idForRecord: `${base}_${mapInfo.key}` };
     }
-    if (info.isDynamic && typeof mapInfo.index === "number") {
-      return { attributeText: `data-testid="${base}_${mapInfo.index}"`, idForRecord: `${base}_${mapInfo.index}` };
+    // Use template string with index variable for dynamic IDs
+    if (info.isDynamic && mapInfo.index) {
+      const exprAttr = `data-testid={\`${base}_\${${mapInfo.index}}\`}`;
+      return { attributeText: exprAttr, idForRecord: `${base}_\${${mapInfo.index}}` };
     }
     // Ensure uniqueness for repeated tags without descriptors
     const unique = shortStableHash(`${info.fileName}:${info.lineNumber}:${role}:${descriptor || ''}`);
@@ -465,6 +504,11 @@ function buildAttributeForElement(
       return { attributeText: `data-testid={\`${id}_\${${mapInfo.key}}\`}`, idForRecord: `${id}_${mapInfo.key}` };
     }
     return { attributeText: `data-testid="${id}_${mapInfo.key}"`, idForRecord: `${id}_${mapInfo.key}` };
+  }
+  // Use template string with index variable for dynamic IDs in safe-hash
+  if (info.isDynamic && mapInfo.index) {
+    const exprAttr = `data-testid={\`${id}_\${${mapInfo.index}}\`}`;
+    return { attributeText: exprAttr, idForRecord: `${id}_\${${mapInfo.index}}` };
   }
   return { attributeText: `data-testid="${id}"`, idForRecord: id };
 }

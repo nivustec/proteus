@@ -1,6 +1,6 @@
 {
   "name": "@nivustec/proteus",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Shape-shifting CLI that auto-injects data-testid into React components (JS/TS).",
   "main": "./dist/cli.js",
