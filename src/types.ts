@@ -7,6 +7,10 @@ export interface ProteuConfig {
   strategy?: "safe-hash" | "functional";
   verbose?: boolean;
   json?: boolean;
+  // Auto-detect and skip reusable components
+  detectReusableComponents?: boolean;
+  // Patterns to auto-exclude (e.g., "**/ui/**", "**/common/**")
+  autoExcludePatterns?: string[];
 }
 
 export interface ElementInfo {

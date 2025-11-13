@@ -98,7 +98,9 @@ Create or edit `proteus.config.json` in your project root.
   "include": ["src/**/*.tsx", "src/**/*.jsx"],
   "exclude": ["node_modules/**", "dist/**"],
   "strategy": "functional",
-  "verbose": false
+  "verbose": false,
+  "detectReusableComponents": true,
+  "autoExcludePatterns": ["**/ui/**", "**/common/**"]
 }
 ```
 
@@ -107,6 +109,40 @@ Create or edit `proteus.config.json` in your project root.
 - include/exclude: glob patterns for files
 - strategy: `safe-hash` or `functional`
 - verbose: enable additional logs in CLI mode
+- **detectReusableComponents**: auto-detect and skip reusable UI components (default: `true`)
+- **autoExcludePatterns**: glob patterns to auto-exclude (e.g., `["**/ui/**", "**/common/**"]`)
+
+### 🆕 Reusable Components Detection (v1.1.0)
+
+Proteus now automatically detects reusable components (like Button, Input, Card from UI libraries) and skips injecting data-testid directly in them. Instead, it injects at the usage sites, ensuring unique IDs for each instance.
+
+**Detection criteria:**
+- File is in a UI/common/shared folder (e.g., `/ui/`, `/common/`, `/shared/`)
+- Uses `React.forwardRef` or `forwardRef<>`
+- Has `{...props}` spread operator
+
+**Example:**
+
+```tsx
+// src/components/ui/button.tsx (auto-skipped by Proteus)
+const Button = React.forwardRef(({ ...props }, ref) => {
+  return <button {...props} ref={ref} />; // ✅ No fixed data-testid
+});
+
+// src/components/Hero.tsx (Proteus injects here)
+<Button onClick={handleClick} data-testid="qa_hero_button_1_abc123">
+  Get Started
+</Button>
+<Button variant="outline" data-testid="qa_hero_button_2_def456">
+  View on GitHub
+</Button>
+```
+
+**Benefits:**
+- ✅ No duplicate data-testid across multiple Button instances
+- ✅ Each usage gets a unique, contextual ID
+- ✅ Works with any UI library (shadcn, MUI, Ant Design, etc.)
+- ✅ Zero configuration required (auto-detection enabled by default)
 
 ---
 

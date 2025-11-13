@@ -14,6 +14,36 @@ interface InjectionResult {
   error?: Error;
 }
 
+// Detect if a file is a reusable component (should not inject directly)
+function isReusableComponent(filePath: string, code: string, config: ProteuConfig): boolean {
+  // Check auto-exclude patterns first
+  if (config.autoExcludePatterns && config.autoExcludePatterns.length > 0) {
+    for (const pattern of config.autoExcludePatterns) {
+      const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\//g, '\\/'));
+      if (regex.test(filePath)) {
+        return true;
+      }
+    }
+  }
+
+  // If detection is disabled, don't check further
+  if (!config.detectReusableComponents) {
+    return false;
+  }
+
+  // Detect common patterns for reusable components
+  const isInUIFolder = /\/(ui|common|shared|components\/ui|components\/common)\//i.test(filePath);
+  const usesForwardRef = /React\.forwardRef|forwardRef\s*</.test(code);
+  const hasSpreadProps = /\{\s*\.\.\.props\s*\}/.test(code);
+  
+  // If it's in a UI folder AND uses forwardRef AND has spread props, it's likely reusable
+  if (isInUIFolder && usesForwardRef && hasSpreadProps) {
+    return true;
+  }
+
+  return false;
+}
+
 // Parse the source, traverse JSX, and inject data-testid attributes
 export function parseAndInject(
   filePath: string,
@@ -23,6 +53,14 @@ export function parseAndInject(
   let injectedCount = 0;
 
   try {
+    // Check if this is a reusable component that should be skipped
+    if (isReusableComponent(filePath, code, config)) {
+      if (config.verbose) {
+        console.log(`⏭️  Skipping reusable component: ${filePath}`);
+      }
+      return { code, injectedCount: 0 };
+    }
+
     const ast = parse(code, {
       sourceType: "module",
       plugins: ["jsx", "typescript"],
