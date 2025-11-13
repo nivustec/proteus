@@ -8,7 +8,7 @@
 [🌍 Website](https://proteus.nivustec.com)
 
 
-<p align="left">
+<p align="center">
   <a href="https://www.npmjs.com/package/@nivustec/proteus"><img alt="npm" src="https://img.shields.io/npm/v/%40nivustec%2Fproteus.svg?color=2ea44f&label=npm" /></a>
   <a href="https://www.npmjs.com/package/@nivustec/proteus"><img alt="downloads" src="https://img.shields.io/npm/dm/%40nivustec%2Fproteus.svg?color=2ea44f" /></a>
   <img alt="node" src="https://img.shields.io/badge/node-%3E%3D18.0.0-2ea44f" />

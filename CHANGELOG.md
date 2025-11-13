@@ -2,68 +2,128 @@
 
 All notable changes to Proteus will be documented in this file.
 
-## [1.1.0] - 2024-11-13
+## [1.0.0] - 2025-11-13
 
-### Added
-- **Auto-detection of simple reusable components**: Proteus now automatically detects and skips **simple reusable UI components** (like Button, Input, etc.) to prevent duplicate data-testid injection
-- New config option `detectReusableComponents` (default: `true`) to enable/disable automatic detection
-- New config option `autoExcludePatterns` to specify glob patterns for auto-exclusion (e.g., `["**/ui/**", "**/common/**"]`)
+### Initial Release
 
-### How it works
-Proteus detects **simple reusable component definitions** by checking:
-1. File location (e.g., `/ui/`, `/common/`, `/shared/` folders)
-2. Use of `React.forwardRef` or `forwardRef<>`
-3. Presence of `{...props}` spread operator
-4. Single component export (simple wrapper pattern)
+#### Features
+- **Automatic data-testid injection** for React components (JSX/TSX)
+- **Two injection strategies:**
+  - `functional`: Semantic IDs like `qa_hero_button_1_abc123`
+  - `safe-hash`: Compact IDs like `qa_abc123`
+- **Smart reusable component detection:**
+  - Automatically detects and skips wrapper components (Button, Input, etc.)
+  - Uses `ref={ref}` + `{...props}` + `forwardRef` pattern detection
+  - Injects at usage sites for unique IDs per instance
+- **Dynamic list support:**
+  - Detects `.map()` functions
+  - Automatically appends key/index to IDs
+  - Template literals: `data-testid={`qa_product_${item.id}`}`
+- **Git integration:**
+  - Pre-commit hook support
+  - Automatic injection before commits
+- **Watch mode:**
+  - Auto-inject on file save during development
+- **Flexible configuration:**
+  - `detectReusableComponents`: Auto-detect UI components (default: true)
+  - `autoExcludePatterns`: Glob patterns for exclusion
+  - `include/exclude`: File pattern matching
+  - `strategy`: Choose injection strategy
+  - `verbose`: Detailed logging
 
-When a simple reusable component is detected, Proteus skips injecting data-testid directly in the component definition. **However, it ALWAYS injects at usage sites**, ensuring every element gets a unique ID.
+#### How It Works
 
-### Important
-- ✅ **Usage sites are ALWAYS processed**: Even if a file is in `/ui/`, Proteus will inject data-testid on JSX elements that USE components
-- ✅ **Only simple wrappers are skipped**: Complex components with multiple elements are still processed normally
-- ✅ **No elements are left without IDs**: Every rendered element will have a data-testid
+**Reusable Component Detection:**
+Proteus detects wrapper components by checking if an element has:
+1. `ref={ref}` attribute
+2. `{...props}` spread operator
+3. Is inside a `forwardRef` function
 
-### Example
+When detected, Proteus skips injecting in the component definition and injects at usage sites instead.
 
-**Before (v1.0.0):**
+**Example:**
+
 ```tsx
-// src/components/ui/button.tsx
-const Button = ({ ...props }) => {
-  return <button {...props} data-testid="qa_button_comp_xxx" />; // ❌ Same ID everywhere
-};
+// src/components/ui/button.tsx (skipped)
+const Button = forwardRef(({ ...props }, ref) => {
+  return <button {...props} ref={ref} />; // ← No data-testid injected here
+});
+
+// src/components/Hero.tsx (injected at usage)
+<Button onClick={handleClick} data-testid="qa_hero_button_1_abc123">
+  Get Started
+</Button>
+<Button variant="outline" data-testid="qa_hero_button_2_def456">
+  View on GitHub
+</Button>
 ```
 
-**After (v1.1.0):**
-```tsx
-// src/components/ui/button.tsx (skipped by Proteus)
-const Button = ({ ...props }) => {
-  return <button {...props} />; // ✅ No fixed ID
-};
+**Dynamic Lists:**
 
-// src/components/Hero.tsx (Proteus injects here)
-<Button data-testid="qa_hero_button_1_xxx">Get Started</Button>
-<Button data-testid="qa_hero_button_2_yyy">GitHub</Button>
+```tsx
+// Before
+{products.map((product) => (
+  <div key={product.id}>
+    <h2>{product.name}</h2>
+    <Button>Add to Cart</Button>
+  </div>
+))}
+
+// After (Proteus injected)
+{products.map((product) => (
+  <div key={product.id} data-testid={`qa_productlist_container_${product.id}`}>
+    <h2 data-testid={`qa_productlist_h2_${product.id}`}>{product.name}</h2>
+    <Button data-testid={`qa_productlist_button_${product.id}`}>Add to Cart</Button>
+  </div>
+))}
 ```
 
-### Configuration
+#### Configuration
 
 ```json
 {
   "strategy": "functional",
+  "include": ["src/**/*.tsx", "src/**/*.jsx"],
+  "exclude": ["node_modules/**", "dist/**"],
   "detectReusableComponents": true,
-  "autoExcludePatterns": [
-    "**/ui/**",
-    "**/common/**",
-    "**/shared/**"
-  ]
+  "autoExcludePatterns": [],
+  "verbose": false
 }
 ```
 
-## [1.0.0] - 2025-11-13
+#### CLI Commands
 
-### Initial Release
-- Automatic data-testid injection for React components
-- Two strategies: `functional` and `safe-hash`
-- Support for dynamic lists with map keys
-- Git pre-commit hook integration
-- Watch mode for development
+```bash
+# Initialize config
+proteus init
+
+# Inject once
+proteus inject
+
+# Inject specific files
+proteus inject src/components/Button.tsx
+
+# Watch mode
+proteus inject --watch
+
+# Setup Git hooks
+proteus setup
+
+# Pre-commit (used by Git hooks)
+proteus pre-commit
+```
+
+#### Benefits
+- ✅ **Zero runtime overhead**: Injection happens at build/dev time
+- ✅ **Consistent IDs**: Enforced naming convention across codebase
+- ✅ **No duplicates**: Unique IDs for every element instance
+- ✅ **Works with UI libraries**: Compatible with shadcn, MUI, Ant Design, etc.
+- ✅ **Smart detection**: Automatically handles reusable components
+- ✅ **Dynamic lists**: Seamless support for mapped elements
+- ✅ **Developer friendly**: Minimal configuration required
+
+---
+
+## Future Releases
+
+See [GitHub Releases](https://github.com/nivustec/proteus/releases) for upcoming features and improvements.

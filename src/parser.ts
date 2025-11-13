@@ -14,39 +14,50 @@ interface InjectionResult {
   error?: Error;
 }
 
-// Detect if a file defines a reusable component (should skip ONLY the component definition)
-// But still inject at usage sites (JSX elements using the component)
-function isReusableComponentDefinition(filePath: string, code: string, config: ProteuConfig): boolean {
-  // If detection is disabled, don't check
-  if (!config.detectReusableComponents) {
-    return false;
-  }
-
-  // Check auto-exclude patterns - these skip the ENTIRE file
-  if (config.autoExcludePatterns && config.autoExcludePatterns.length > 0) {
-    for (const pattern of config.autoExcludePatterns) {
-      const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\//g, '\\/'));
-      if (regex.test(filePath)) {
-        return true;
-      }
+// Check if we're inside a forwardRef function
+function isInsideForwardRef(path: any): boolean {
+  let current = path;
+  while (current) {
+    // Check if parent is a CallExpression with forwardRef
+    if (
+      current.isCallExpression() &&
+      current.node.callee &&
+      (
+        (current.node.callee.type === "Identifier" && current.node.callee.name === "forwardRef") ||
+        (current.node.callee.type === "MemberExpression" && 
+         current.node.callee.property && 
+         current.node.callee.property.name === "forwardRef")
+      )
+    ) {
+      return true;
     }
+    current = current.parentPath;
   }
-
-  // Detect common patterns for reusable component DEFINITIONS
-  const isInUIFolder = /\/(ui|common|shared|components\/ui|components\/common)\//i.test(filePath);
-  const usesForwardRef = /React\.forwardRef|forwardRef\s*</.test(code);
-  const hasSpreadProps = /\{\s*\.\.\.props\s*\}/.test(code);
-  
-  // Only skip if ALL conditions are met AND it's a simple wrapper (single return statement)
-  if (isInUIFolder && usesForwardRef && hasSpreadProps) {
-    // Check if it's a simple wrapper (likely reusable)
-    const hasMultipleElements = (code.match(/<[A-Z]/g) || []).length > 1;
-    if (!hasMultipleElements) {
-      return true; // Skip simple wrappers like Button, Input
-    }
-  }
-
   return false;
+}
+
+// Check if element has ref={ref} attribute (forwarded ref)
+function hasForwardedRef(node: t.JSXOpeningElement): boolean {
+  return node.attributes.some(
+    (attr: t.JSXAttribute | t.JSXSpreadAttribute) =>
+      t.isJSXAttribute(attr) &&
+      t.isJSXIdentifier(attr.name) &&
+      attr.name.name === "ref" &&
+      attr.value &&
+      t.isJSXExpressionContainer(attr.value) &&
+      t.isIdentifier(attr.value.expression) &&
+      attr.value.expression.name === "ref"
+  );
+}
+
+// Check if element has {...props} spread
+function hasPropsSpread(node: t.JSXOpeningElement): boolean {
+  return node.attributes.some(
+    (attr: t.JSXAttribute | t.JSXSpreadAttribute) =>
+      t.isJSXSpreadAttribute(attr) &&
+      t.isIdentifier(attr.argument) &&
+      attr.argument.name === "props"
+  );
 }
 
 // Parse the source, traverse JSX, and inject data-testid attributes
@@ -58,14 +69,6 @@ export function parseAndInject(
   let injectedCount = 0;
 
   try {
-    // Check if this is a simple reusable component definition that should be skipped
-    if (isReusableComponentDefinition(filePath, code, config)) {
-      if (config.verbose) {
-        console.log(`⏭️  Skipping reusable component definition: ${filePath}`);
-      }
-      return { code, injectedCount: 0 };
-    }
-
     const ast = parse(code, {
       sourceType: "module",
       plugins: ["jsx", "typescript"],
@@ -96,6 +99,23 @@ export function parseAndInject(
         );
 
         if (hasTestId) return;
+
+        // SKIP if this element is a reusable component wrapper:
+        // - Inside forwardRef
+        // - Has ref={ref}
+        // - Has {...props}
+        if (config.detectReusableComponents) {
+          const insideForwardRef = isInsideForwardRef(path);
+          const hasRef = hasForwardedRef(node);
+          const hasSpread = hasPropsSpread(node);
+          
+          if (insideForwardRef && hasRef && hasSpread) {
+            if (config.verbose) {
+              console.log(`⏭️  Skipping reusable component wrapper at ${filePath}:${lineNumber}`);
+            }
+            return; // Skip this element, but continue processing others
+          }
+        }
 
         const mapInfo = getMapInfo(path);
         const isDynamic = isInsideMapFunction(path);
