@@ -8,6 +8,8 @@ const defaultConfig: ProteuConfig = {
   exclude: ["node_modules/**", "dist/**"],
   strategy: "functional",
   verbose: false,
+  detectReusableComponents: true,
+  autoExcludePatterns: [],
 };
 
 export function loadConfig(configPath?: string, silent: boolean = false): ProteuConfig {
