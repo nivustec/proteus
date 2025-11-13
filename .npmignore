@@ -1,0 +1,14 @@
+src/
+examples/
+scripts/
+tsconfig.json
+tsconfig.cjs.json
+proteu.config.json
+.proteu-ids.json
+.gitignore
+*.log
+.DS_Store
+*.tmp
+coverage/
+.nyc_output/
+test-*

@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "The name of the tool to be called.",
+      "enum": ["proteus_inject_tool"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Injects data-testid attributes into React components in a specified project."
+    },
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": "Optional. A list of specific file paths to process.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "include": {
+          "type": "array",
+          "description": "Optional. A list of glob patterns to include for processing.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exclude": {
+          "type": "array",
+          "description": "Optional. A list of glob patterns to exclude from processing.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "strategy": {
+          "type": "string",
+          "description": "Optional. The ID generation strategy. Can be 'safe-hash' or 'functional'.",
+          "enum": ["safe-hash", "functional"]
+        },
+        "json_output": {
+          "type": "boolean",
+          "description": "Required. Must be true to return machine-readable JSON output."
+        }
+      },
+      "required": ["json_output"]
+    }
+  },
+  "required": ["name", "description", "parameters"]
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.proteu-ids.json
+*.log
+.DS_Store
+*.tmp
+coverage/
+.nyc_output/

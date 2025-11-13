@@ -1,0 +1,69 @@
+{
+  "name": "@nivustec/proteus",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shape-shifting CLI that auto-injects data-testid into React components (JS/TS).",
+  "main": "./dist/cli.js",
+  "bin": {
+    "proteus": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "proteus:pre-commit": "proteus pre-commit"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "proteus",
+    "nivustec",
+    "react",
+    "data-testid",
+    "qa",
+    "testing",
+    "automation",
+    "cli",
+    "test-automation",
+    "javascript",
+    "typescript",
+    "shape-shifter",
+    "code-transformation"
+  ],
+  "author": "Nivustec <contato@nivustec.com.br>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nivustec/proteus"
+  },
+  "homepage": "https://nivustec.com.br/proteus",
+  "bugs": {
+    "url": "https://github.com/nivustec/proteus/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "@babel/traverse": "^7.23.0",
+    "@babel/types": "^7.23.0",
+    "chokidar": "^3.5.3",
+    "commander": "^11.1.0",
+    "glob": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.1",
+    "@types/node": "^20.8.0",
+    "typescript": "^5.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run proteus:pre-commit"
+    }
+  }
+}
