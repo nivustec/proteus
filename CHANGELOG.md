@@ -2,20 +2,26 @@
 
 All notable changes to Proteus will be documented in this file.
 
-## [1.1.0] - 2025-13-11
+## [1.1.0] - 2024-11-13
 
 ### Added
-- **Auto-detection of reusable components**: Proteus now automatically detects and skips reusable UI components (like Button, Input, etc.) to prevent duplicate data-testid injection
+- **Auto-detection of simple reusable components**: Proteus now automatically detects and skips **simple reusable UI components** (like Button, Input, etc.) to prevent duplicate data-testid injection
 - New config option `detectReusableComponents` (default: `true`) to enable/disable automatic detection
 - New config option `autoExcludePatterns` to specify glob patterns for auto-exclusion (e.g., `["**/ui/**", "**/common/**"]`)
 
 ### How it works
-Proteus detects reusable components by checking:
+Proteus detects **simple reusable component definitions** by checking:
 1. File location (e.g., `/ui/`, `/common/`, `/shared/` folders)
 2. Use of `React.forwardRef` or `forwardRef<>`
 3. Presence of `{...props}` spread operator
+4. Single component export (simple wrapper pattern)
 
-When a reusable component is detected, Proteus skips injecting data-testid directly in the component definition. Instead, it injects at the usage sites, ensuring unique IDs for each instance.
+When a simple reusable component is detected, Proteus skips injecting data-testid directly in the component definition. **However, it ALWAYS injects at usage sites**, ensuring every element gets a unique ID.
+
+### Important
+- ✅ **Usage sites are ALWAYS processed**: Even if a file is in `/ui/`, Proteus will inject data-testid on JSX elements that USE components
+- ✅ **Only simple wrappers are skipped**: Complex components with multiple elements are still processed normally
+- ✅ **No elements are left without IDs**: Every rendered element will have a data-testid
 
 ### Example
 

@@ -1,6 +1,6 @@
 {
   "name": "@nivustec/proteus",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "type": "module",
   "description": "Shape-shifting CLI that auto-injects data-testid into React components (JS/TS).",
   "main": "./dist/cli.js",
@@ -38,7 +38,7 @@
     "type": "git",
     "url": "https://github.com/nivustec/proteus"
   },
-  "homepage": "https://nivustec.com.br/proteus",
+  "homepage": "https://proteus.nivustec.com.br",
   "bugs": {
     "url": "https://github.com/nivustec/proteus/issues"
   },

@@ -14,9 +14,15 @@ interface InjectionResult {
   error?: Error;
 }
 
-// Detect if a file is a reusable component (should not inject directly)
-function isReusableComponent(filePath: string, code: string, config: ProteuConfig): boolean {
-  // Check auto-exclude patterns first
+// Detect if a file defines a reusable component (should skip ONLY the component definition)
+// But still inject at usage sites (JSX elements using the component)
+function isReusableComponentDefinition(filePath: string, code: string, config: ProteuConfig): boolean {
+  // If detection is disabled, don't check
+  if (!config.detectReusableComponents) {
+    return false;
+  }
+
+  // Check auto-exclude patterns - these skip the ENTIRE file
   if (config.autoExcludePatterns && config.autoExcludePatterns.length > 0) {
     for (const pattern of config.autoExcludePatterns) {
       const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\//g, '\\/'));
@@ -26,19 +32,18 @@ function isReusableComponent(filePath: string, code: string, config: ProteuConfi
     }
   }
 
-  // If detection is disabled, don't check further
-  if (!config.detectReusableComponents) {
-    return false;
-  }
-
-  // Detect common patterns for reusable components
+  // Detect common patterns for reusable component DEFINITIONS
   const isInUIFolder = /\/(ui|common|shared|components\/ui|components\/common)\//i.test(filePath);
   const usesForwardRef = /React\.forwardRef|forwardRef\s*</.test(code);
   const hasSpreadProps = /\{\s*\.\.\.props\s*\}/.test(code);
   
-  // If it's in a UI folder AND uses forwardRef AND has spread props, it's likely reusable
+  // Only skip if ALL conditions are met AND it's a simple wrapper (single return statement)
   if (isInUIFolder && usesForwardRef && hasSpreadProps) {
-    return true;
+    // Check if it's a simple wrapper (likely reusable)
+    const hasMultipleElements = (code.match(/<[A-Z]/g) || []).length > 1;
+    if (!hasMultipleElements) {
+      return true; // Skip simple wrappers like Button, Input
+    }
   }
 
   return false;
@@ -53,10 +58,10 @@ export function parseAndInject(
   let injectedCount = 0;
 
   try {
-    // Check if this is a reusable component that should be skipped
-    if (isReusableComponent(filePath, code, config)) {
+    // Check if this is a simple reusable component definition that should be skipped
+    if (isReusableComponentDefinition(filePath, code, config)) {
       if (config.verbose) {
-        console.log(`⏭️  Skipping reusable component: ${filePath}`);
+        console.log(`⏭️  Skipping reusable component definition: ${filePath}`);
       }
       return { code, injectedCount: 0 };
     }
