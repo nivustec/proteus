@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img src="https://proteus.nivustec.com.br/icons/proteus.png" title="Proteus" alt="Proteus logo" width="128">
+<img src="https://proteus.nivustec.com.br/android-chrome-512x512.png" title="Proteus" alt="Proteus logo" width="128">
 
 # Proteus
 
